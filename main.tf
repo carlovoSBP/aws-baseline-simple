@@ -47,3 +47,37 @@ resource "aws_budgets_budget" "default" {
     subscriber_email_addresses = [var.notification_email]
   }
 }
+
+data "aws_iam_policy_document" "api_gateway_log_cloudwatch_role" {
+  statement {
+    sid    = "ApiGatewayToCloudWatch"
+    effect = "Allow"
+
+    actions = [
+      "logs:CreateLogGroup",
+      "logs:CreateLogStream",
+      "logs:DescribeLogGroups",
+      "logs:DescribeLogStreams",
+      "logs:PutLogEvents",
+      "logs:GetLogEvents",
+      "logs:FilterLogEvents"
+    ]
+
+    # this seems okay, because it's basically a service linked role
+    resources = ["*"]
+  }
+}
+
+module "api_gateway_log_cloudwatch_role" {
+  source  = "schubergphilis/mcaf-role/aws"
+  version = "0.5.3"
+
+  name                  = format("api-gateway-cloudwatch-%s", data.aws_region.current.region)
+  principal_type        = "Service"
+  principal_identifiers = ["apigateway.amazonaws.com"]
+  role_policy           = data.aws_iam_policy_document.api_gateway_log_cloudwatch_role.json
+}
+
+resource "aws_api_gateway_account" "this" {
+  cloudwatch_role_arn = module.api_gateway_log_cloudwatch_role.arn
+}
