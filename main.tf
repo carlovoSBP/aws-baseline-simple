@@ -21,6 +21,7 @@ module "artifacts_bucket" {
     {
       id      = "cleanup"
       enabled = true
+
       abort_incomplete_multipart_upload = {
         days_after_initiation = 2
       }
@@ -30,4 +31,19 @@ module "artifacts_bucket" {
       }
     }
   ]
+}
+
+resource "aws_budgets_budget" "default" {
+  budget_type  = "COST"
+  limit_amount = var.monthly_budget_limit
+  limit_unit   = "EUR"
+  time_unit    = "MONTHLY"
+
+  notification {
+    comparison_operator        = "GREATER_THAN"
+    threshold                  = "100"
+    threshold_type             = "PERCENTAGE"
+    notification_type          = "ACTUAL"
+    subscriber_email_addresses = [var.notification_email]
+  }
 }
